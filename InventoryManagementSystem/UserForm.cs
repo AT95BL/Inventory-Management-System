@@ -1,0 +1,93 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace InventoryManagementSystem
+{
+    public partial class UserForm : Form
+    {
+        // Create a connection to the database
+        SqlConnection con = new SqlConnection(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\Korisnik.DESKTOP-JVOQTMK\Downloads\InventoryManagementSystem\InventoryManagementSystem\Tutorial Database\dbIMS.mdf;Integrated Security=True;Connect Timeout=30");
+
+        // Create a command object
+        SqlCommand cm = new SqlCommand();
+
+        // Create a data reader
+        SqlDataReader dr;
+
+        public UserForm()
+        {
+            InitializeComponent();
+            // Load the user data
+            LoadUser();
+        }
+
+        // u UserForm.cs
+        public void LoadUser()
+        {
+            int i = 0;
+            dgvUser.Rows.Clear();
+            cm = new SqlCommand("sp_GetAllUsers", con);
+            cm.CommandType = CommandType.StoredProcedure;
+            con.Open();
+            dr = cm.ExecuteReader();
+            while (dr.Read())
+            {
+                i++;
+                dgvUser.Rows.Add(i, dr[0].ToString(), dr[1].ToString(), dr[2].ToString(), dr[3].ToString());
+            }
+            dr.Close();
+            con.Close();
+        }
+
+        // Add a new user
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            // Create a new UserModuleForm object
+            UserModuleForm userModule = new UserModuleForm();
+            userModule.btnSave.Enabled = true;
+            userModule.btnUpdate.Enabled = false;
+            userModule.ShowDialog();
+            // Load the user data after adding a new user
+            LoadUser();
+        }
+
+        // Edit or delete a user
+        private void dgvUser_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            string colName = dgvUser.Columns[e.ColumnIndex].Name;
+            if (colName == "Edit")
+            {
+                UserModuleForm userModule = new UserModuleForm();
+                userModule.txtUserName.Text = dgvUser.Rows[e.RowIndex].Cells[1].Value.ToString();
+                userModule.txtFullName.Text = dgvUser.Rows[e.RowIndex].Cells[2].Value.ToString();
+                userModule.txtPass.Text = dgvUser.Rows[e.RowIndex].Cells[3].Value.ToString();
+                userModule.txtPhone.Text = dgvUser.Rows[e.RowIndex].Cells[4].Value.ToString();
+
+                userModule.btnSave.Enabled = false;
+                userModule.btnUpdate.Enabled = true;
+                userModule.txtUserName.Enabled = false;
+                userModule.ShowDialog();
+            }
+            else if (colName == "Delete")
+            {
+                if (MessageBox.Show("Are you sure you want to delete this user?","Delete Record",MessageBoxButtons.YesNo,MessageBoxIcon.Question)==DialogResult.Yes)
+                {
+                    con.Open();
+                    cm = new SqlCommand("DELETE FROM tbUser WHERE username LIKE '" + dgvUser.Rows[e.RowIndex].Cells[1].Value.ToString() + "'", con);
+                    cm.ExecuteNonQuery();
+                    con.Close();
+                    MessageBox.Show("Record has been successfully deleted!");
+                }
+            }
+            LoadUser();
+        }
+    }
+}
